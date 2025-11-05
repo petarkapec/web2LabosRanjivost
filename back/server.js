@@ -43,7 +43,7 @@ app.get("/data", (req, res) => {
 
 
 app.get("/adminData", (req, res) => {
-  if (zastita) {
+  if (!zastita) {
     res.status(401).json({ message: "RESTRICTED", error: "UNAUTHORIZED" });
   } else {
     res.json(adminData);
