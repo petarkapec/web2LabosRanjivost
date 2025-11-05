@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="hr">
+<head>
+  <meta charset="utf-8">
+  <title>Ranjiva stranica (primjer)</title>
+</head>
+<body>
+    <div>
+    <h1>Dobrodošli na ranjivu stranicu XSS napad</h1>
+    <div>
+    <h2>Pošaljite poruku voditelju stranice!</h2>
+    <input type="text" id="input" placeholder="Unesite nešto..." />
+    <button onclick="functionButton()">Pošalji</button>
+    <br><br>
+    <label>
+      <input type="checkbox" id="vulnerabilityToggle" onchange="toggleVulnerability()">
+      Omogući ranjivost (XSS napadi)
+    </label>
+    </div>
+  <div id="output"></div>
+  <div>
+    <h1>Dobrodošli na ranjivu stranicu broken access control napad</h1>
+    <div>
+    <h2>Preuzmite potrebnu datoteku</h2>
+    <input type="text" id="input2" placeholder="Unesite nešto..." />
+    <button onclick="preuzmiDatoteku()">preuzmi datoteku</button>
+    <br><br>
+    <label>
+      <input type="checkbox" id="vulnerabilityToggle" onchange="toggleVulnerabilityAccess()">
+      Omogući ranjivost (BrokenAcessControl)
+    </label>
+    <div>
+        prikaz rezultata
+        <div id="prikazRezultata"></div>
+    </div>
+    </div>
+  <div id="output"></div>
+  </div>
+
+  <script>
+    const mockSecretData = {
+      apiToken: "sk_test_1234567890abcdefghijklmnop",
+      userId: "user_789012",
+      email: "test@example.com",
+      creditCard: "4111-1111-1111-1111",
+      sessionId: "sess_xyz789abc456def"
+    };
+
+    const BACKEND_URL = 'http://localhost:3000';
+    
+    let isVulnerable = false;
+
+    function toggleVulnerabilityAccess() {
+        fetch(`${BACKEND_URL}/ukljuciZastita`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+    
+            console.log('Status zaštite promijenjen:', data);
+        })
+        .catch(error => {
+            console.error('Greška pri promjeni zaštite:', error);
+        });
+    }
+
+    function preuzmiDatoteku() {
+        const userInputElement = document.getElementById('input2');
+        const userInput = userInputElement.value;
+        const prikazRezultata = document.getElementById('prikazRezultata');
+      
+        if (!userInput) return;
+
+        // GET zahtjev na backend
+        fetch(`${BACKEND_URL}/${userInput}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.text();
+            })
+            .then(data => {
+                prikazRezultata.textContent = data;
+            })
+            .catch(error => {
+                console.error('Greška pri preuzimanju:', error);
+                prikazRezultata.textContent = 'Došlo je do greške pri preuzimanju podataka';
+            });
+        }
+    
+
+    function toggleVulnerability() {
+      isVulnerable = document.getElementById('vulnerabilityToggle').checked;
+      const status = isVulnerable ? "RANJIVO" : "ZAŠTIĆENO";
+      
+    }
+
+    
+    function getSecretInfo() {
+      return `Token: ${mockSecretData.apiToken}, Kartica: ${mockSecretData.creditCard}`;
+    }
+
+    
+    function sanitizeHTML(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function containsXSS(input) {
+      const xssPatterns = [
+        /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+        /javascript:/gi,
+        /on\w+\s*=/gi,
+        /<iframe/gi,
+        /<object/gi,
+        /<embed/gi,
+        /<form/gi,
+        /<meta/gi,
+        /<link/gi,
+        /<base/gi
+      ];
+      
+      return xssPatterns.some(pattern => pattern.test(input));
+    }
+
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const userProvided = urlParams.get('input') || location.hash.slice(1);
+    
+    if (userProvided) {
+      if (isVulnerable) {
+        
+        document.getElementById('output').innerHTML = '<p>Korisnik kaže: ' + userProvided + '</p>';
+      } else {
+        
+        document.getElementById('output').innerHTML = '<p>Korisnik kaže: ' + sanitizeHTML(userProvided) + '</p>';
+      }
+    }
+
+    const functionButton = () => {
+      const userInputElement = document.getElementById('input');
+      const userInput = userInputElement.value;
+      
+      if (!userInput) return;
+
+      if (isVulnerable) {
+       
+        document.getElementById('output').innerHTML += '<p>Korisnik unio: ' + userInput + '</p>';
+      } else {
+       
+        if (containsXSS(userInput)) {
+          document.getElementById('output').innerHTML += '<p style="color: orange">UPOZORENJE: Otkriven XSS pokušaj napada! Unos je blokiran.</p>';
+          console.warn("XSS napad blokiran:", userInput);
+        } else {
+       
+          document.getElementById('output').innerHTML += '<p>Korisnik unio: ' + sanitizeHTML(userInput) + '</p>';
+        }
+      }
+
+   
+      console.log("Tajni podaci u pozadini:", getSecretInfo());
+      
+   
+      userInputElement.value = '';
+    };
+
+    
+    console.log("Aplikacija je učitala tajne podatke:", mockSecretData);
+    console.log("Početno stanje ranjivosti: ISKLJUČENO");
+  </script>
+</body>
+</html>
